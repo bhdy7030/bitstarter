@@ -42,19 +42,12 @@ var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
 };
 
-var gethtml = function(data){
-//console.log(data);
-    return data;
 
-};
 
-var cheerioURL = function(url){
+var cheerioURL = function(htmldata){
   
- 
-  // rest.get(url).on('complete',function(data){console.log(data);});
-   rest.get(url).on('complete',function(data){gethtml(data);});
-//return rest.get(url).on('complete',function(data){return cheerio.load(data);});
-   return gethtml;
+  
+   return cheerio.load(htmldata);
 
 };
 
@@ -64,8 +57,9 @@ var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkURL = function(url,checksfile){
- $ = cheerioURL(url);
+
+var checkURL = function(htmldata,checksfile){
+ $ = cheerioURL(htmldata);
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -99,19 +93,36 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-	.option('-u, --url <html_url>', 'Url of index.html')
-	.parse(process.argv);
+    .option('-u, --url <html_url>', 'Url of index.html')
+    .parse(process.argv);
     var symbols = process.argv;
     console.log(symbols[4]);
     if(symbols[4]=='--url'){
 	console.log('url...');
-	var checkJson = checkURL(program.url,program.checks);
-    }else{
-	console.log('html...');
-	var checkJson = checkHtmlFile(program.file, program.checks);}
 
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+	rest.get(program.url).on('complete', function(result, response) {
+            if (result instanceof Error) {
+                console.error('Error: ' + util.format(response.message));
+            } else {
+                //console.log("Wrote %s", result);                
+		 
+		var checkJson = checkURL(result,program.checks);
+		var outJson = JSON.stringify(checkJson, null, 4);
+		  console.log(outJson);
+            }
+        });
+
+	
+
+    }else{
+
+	console.log('html...');
+	var checkJson = checkHtmlFile(program.file, program.checks);
+	var outJson = JSON.stringify(checkJson, null, 4);
+	console.log(outJson);
+}
+
+    
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
